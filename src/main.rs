@@ -12,24 +12,24 @@ async fn main() {
 
     let bot = Bot::from_env();
 
-    let last_sticker_id: Arc<TokioMutex<Option<String>>> = Arc::new(TokioMutex::new(None));
+    let last_person_id: Arc<TokioMutex<Option<String>>> = Arc::new(TokioMutex::new(None));
 
     teloxide::repl(bot, move |bot: Bot, msg: Message| {
-        let last_sticker_id = Arc::clone(&last_sticker_id);
+        let last_person_id = Arc::clone(&last_person_id);
         async move {
             // Check if the message is a sticker
-            if let Some(sticker) = msg.sticker() {
-                // Check if the sticker is the same as the last one
-                let mut last_sticker_id = last_sticker_id.lock().await;
-                if let Some(last_id) = last_sticker_id.as_ref() {
-                    if last_id == &sticker.file.unique_id {
-                        info!("Same sticker sent again! Deleting...");
+            if let Some(_sticker) = msg.sticker() {
+                // Check if the sticker is sent from the same person
+                let mut last_person_id = last_person_id.lock().await;
+                if let Some(last_id) = last_person_id.as_ref() {
+                    if last_id == &msg.from().unwrap().id.to_string() {
+                        info!("Sticker sent from same person! Deleting...");
                         bot.delete_message(msg.chat.id, msg.id).await?;
                         return Ok(());
                     }
                 }
-                info!("New sticker sent, saving it...");
-                *last_sticker_id = Some(sticker.file.unique_id.clone());
+                info!("New sticker sent, saving user ID...");
+                *last_person_id = Some(msg.from().unwrap().id.to_string());
             }
             Ok(())
         }
